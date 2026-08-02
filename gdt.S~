@@ -1,0 +1,8 @@
+.code16 //Bootloader needs to have 16 bit code
+.globl gdt_set //this must be available to other file
+
+gdt_set:
+	movw 2(%bp), %ax	;//Move the argument into the %ax register
+	lgdt (%ax)		;
+	mov 0x10, %ax		;Set all segment registers to kernel data segment except CS
+	mov %ax, 

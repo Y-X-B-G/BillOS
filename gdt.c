@@ -1,0 +1,32 @@
+#include "gdt.h"
+//External assembly function 
+extern void gdt_set(size_t);
+//The gdt table
+struct gdt_entry gdt_table[4];
+
+//The pointer loaded into the GDTR register using the LGDT register
+struct gdt_pointer gdt_table_pointer;
+
+void gdt_init() {
+  //This subtraction occurs because the maximum value of Size is 65535, while the GDT can be up to 65536 bytes in length (8192 entries)
+  gdt_table_pointer.limit = sizeof(gdt_entry)*5 - 1;
+  gdt_table_pointer.table = &gdt_table;
+  //Figure out why OS dev recommends these entries 
+  gdt_entry_init(0,0,0,0,0,0);
+  gdt_entry_init(1, 0x0, 0xFFFFF, 0x9A, 0xC); //kernel code segment
+  gdt_entry_init(2, 0x0, 0xFFFFF, 0x92, 0xC); //kernel data segment 
+  gdt_entry_init(5, 0x0, 0xFFFFF, 0x89, 0x0); //Task state segment
+
+  gdt_set(&gdt_table_pointer);
+  
+};
+
+void gdt_entry_init(uint32_t index, uint32_t base, uint32_t limit, uint8_t access, uint8_t flags) {
+  gdt_table[index].limit1 = limit & 0xFFFF;
+  gdt_table[index].base1 = base & 0xFFFF;
+  gdt_table[index].base2 = (base >> 16) & 0xFF;
+  gdt_table[index].access = access;
+  gdt_table[index].limitflags = (limit >> 16) & (flags << 4);
+  gdt_table[index].base3 = (base >> 24);
+};
+

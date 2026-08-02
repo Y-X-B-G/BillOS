@@ -2,7 +2,13 @@
 //If functions need to return a value just write it to one of the D registers  
 .global _start
 _start:	
-	cli 			;//Disables interrupts because we don't want the bootloader to be interrupted
+	cli;//Disables interrupts because we don't want the bootloader to be interrupted
+	xorw %ax, %ax		;
+	movw %ax, %ds		;//Set all segment registers to 0
+	movw %ax, %es		;
+	movw %ax, %ss		;
+	movw %ax, %fs		;
+	movw %ax, %gs		;movw %ax, %ss		;//Set the stack segment register to 0
 	movw $0x7BFF, %sp	;//Sets the stack and base pointers remember that it grows downwards from 0x7Bff to 0x500
 	movw $0x7BFF, %bp	;
 				//We need to check and see if the A20 line is enabled
@@ -10,14 +16,12 @@ _start:
 				//0x500 - 0x7bff are the first bytes of convential memory we have access to so we can write to 0x100500 - 0x107bff and see if it gets looped back around
 				//Write 0 to 0x500 then write 1 to 0x100500 then check 0x500 to see if it got overwritten
 				// to address 0x100500 its seg*16+offset so 0x1000
-	movw $0x0, %ax
-	movw %ax, %es		;
-	movl $0x0500, %bx	;
+	movw $0x0500, %bx	;
 	movw $0x0, %es:(%bx)	;
 	
-	movl $0xFFFF, %ax	;
-	movl %ax, %ex		;
-	movl $0x510, %bx	;
+	movw $0xFFFF, %ax	;
+	movw %ax, %ex		;
+	movw $0x510, %bx	;
 	movw $0x01, %es:(%bx)	;
 	
 	cmp $0x01,  %es:(%bx)	;
@@ -29,9 +33,13 @@ waitforstatus:
 	JE waitforstatus	;//OK THIS MIGHT CAUSE AN INFINITE LOOP NOW THAT I THINK ABOUT IT ASK SOMEONE HOW TO FIX THIS
 	call setA20		;//Since the 2nd bit is clear we are free to set A20	
 A20alreadyenabled:	
-	
+	call gdt_init		;This should set up the gdt and segment registers again check gdt.h, gdt.c, and gdt.S for implementation
 
+	mov %cr0, %eax 		;//Get the Cr0 register bits
+	or 0x1, %eax		;//Set bit 0 to 1 to enabled protected mode
+	mov %eax, %cr0		;//Write back to Cr0
 
+	call bootmain		;
 	
 checkstatus:
 	in  0x64, %dl		;//read the status register from the control port int %dl
